@@ -47,12 +47,35 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
+typedef struct
+{
+	unsigned long task1_period;
+	TIM_HandleTypeDef *htim;
+}task1;
+
+typedef struct
+{
+	unsigned long task2_period;
+	TIM_HandleTypeDef *htim;
+	uint8_t p;
+
+}task2;
+
+typedef struct
+{
+	unsigned long task3_period;
+	TIM_HandleTypeDef *htim;
+
+}task3;
+
+void Blink_Led( void *arg);
+void Message( void *arg2);
+void Sensor(void *arg3);
 
 
 void sch();
 
-void Blink_Led(TIM_HandleTypeDef *htim);
-void Message(TIM_HandleTypeDef *htim);
+
 
 /* USER CODE END EM */
 

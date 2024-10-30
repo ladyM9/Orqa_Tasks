@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "string.h"
+#include <stdio.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -72,21 +73,22 @@ UART_HandleTypeDef huart3;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-void Blink_Led(TIM_HandleTypeDef *htim);
-void Message(TIM_HandleTypeDef *htim);
-void Sensor(TIM_HandleTypeDef *htim);
-uint8_t p[] = "Hello \r\n";
 
-void (*funkcije[2])();
+
+//uint8_t p[] = "Hello \r\n";
+char sensor[50];
+//= "Hello\n\r";
+
+void (*ptr[5])(void*) = {&Blink_Led, &Message, &Sensor};
+
+
 unsigned long current_millis = 0;
 unsigned long current_millis2 = 0;
 unsigned long current_millis3 = 0;
 unsigned long start_millis = 0;
-unsigned long task1_period = 1000;
 
-unsigned long task2_period = 5000;
-unsigned long task3_period = 10000;
-char sensor[50];
+
+
 
 void sch();
 
@@ -145,7 +147,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   htim2.Init.Period = T2_PRE;
 
- // HAL_TIM_Base_Start(&htim2);
+  HAL_TIM_Base_Start(&htim2);
  // start_millis = HAL_GetTick();
   /* USER CODE END 2 */
 
@@ -160,6 +162,7 @@ int main(void)
 
 
 	  sch();
+
 
 
 	//  int len = sprintf(uart_buff, "%u \n\r", timer_val);
@@ -500,41 +503,66 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 
-void Blink_Led(TIM_HandleTypeDef *htim)
+void Blink_Led(void *arg)
 {
-	if(htim->Instance == TIM2)
-	{
+	if(arg == NULL) return;
+	task1 *mojHandler = (task1*)arg;
+
+
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
-	}
-}
-
-void Message(TIM_HandleTypeDef *htim)
-{
-	if(htim->Instance == TIM2)
-	{
-
-		HAL_UART_Transmit(&huart3, p, sizeof(p), 1000);
-	}
 
 
 }
 
-void Sensor(TIM_HandleTypeDef *htim)
+
+void Message(void *arg2)
 {
-	if(htim->Instance == TIM2)
-	{
+	if(arg2 == NULL) return;
+	task2 *mojHandler2 = (task2*)arg2;
+//	mojHandler2->htim;
+	uint8_t polje[50];
+
+	sprintf(polje, " %d", mojHandler2->p);
+	HAL_UART_Transmit(&huart3, polje, 50, 1000);
+	//	printf()
+
+
+
+
+
+}
+
+void Sensor(void *arg3)
+{
+	if(arg3 == NULL) return;
+	task3 *mojHandler3 = (task3*)arg3;
+
 		int a = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1);
 		int len = sprintf(sensor, "Temp: %d", a);
 		HAL_UART_Transmit(&huart3,(uint8_t *)sensor, len, 1000);
 
-	}
+
 }
 
 void sch()
 {
 	//funkcije[0] = Blink_Led(&htim2)
 	//funkcije[1] = Message(&htim3);
-	start_millis = HAL_GetTick();
+	//start_millis = HAL_GetTick();
+	task1 t1;
+	t1.task1_period = 1000;
+	t1.htim = &htim2;
+
+	task2 t2;
+	t2.htim = &htim2;
+	t2.task2_period = 5000;
+	t2.p = 12;
+	task3 t3;
+	t3.htim = &htim2;
+	t3.task3_period = 10000;
+
+
+	start_millis = __HAL_TIM_GET_COUNTER(&htim2);
 
 
 
@@ -549,21 +577,21 @@ void sch()
 
 
 
-	  if(start_millis - current_millis > task1_period)
+	  if(start_millis - current_millis > t1.task1_period)
 	  {
 		  current_millis = start_millis;
-		  Blink_Led(&htim2);
+		  ptr[0](&t1);
 
 	  }
-	  if(start_millis - current_millis2 > task2_period)
+	  if(start_millis - current_millis2 > t2.task2_period)
 	  {
 		  current_millis2 = start_millis;
-		  Sensor(&htim2);
+			ptr[1](&t2);
 	  }
-	  if(start_millis - current_millis3 > task3_period)
+	  if(start_millis - current_millis3 > t3.task3_period)
 	  {
 		  current_millis3 = start_millis;
-		  Message(&htim2);
+			ptr[2](&t3);
 	  }
 
 
