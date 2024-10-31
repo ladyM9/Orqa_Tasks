@@ -93,14 +93,12 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define T2_PRE 7000
-#define T2_CNT 4999
+#define T2_PRE 5000
+#define T2_CNT 2000
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB
-#define DHT11_Pin GPIO_PIN_1
-#define DHT11_GPIO_Port GPIOB
 #define LD3_Pin GPIO_PIN_14
 #define LD3_GPIO_Port GPIOB
 #define STLINK_RX_Pin GPIO_PIN_8
@@ -113,6 +111,10 @@ void Error_Handler(void);
 #define USB_OTG_FS_OVCR_GPIO_Port GPIOG
 #define GREEN_LED_Pin GPIO_PIN_8
 #define GREEN_LED_GPIO_Port GPIOC
+#define SCL_SHT21_Pin GPIO_PIN_8
+#define SCL_SHT21_GPIO_Port GPIOB
+#define SDA_SHT21_Pin GPIO_PIN_9
+#define SDA_SHT21_GPIO_Port GPIOB
 #define LD2_Pin GPIO_PIN_1
 #define LD2_GPIO_Port GPIOE
 

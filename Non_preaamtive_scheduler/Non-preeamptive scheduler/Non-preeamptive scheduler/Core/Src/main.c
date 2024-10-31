@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,6 +38,9 @@
 #define T3_CNT 4999
 #define T2_PRE 7000
 #define T2_CNT 4999
+#define SHT21_ADDRESS 0x40
+#define SHT21_CMD_TEMP 0xE3
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -65,6 +70,8 @@ ETH_TxPacketConfig TxConfig;
 
 ETH_HandleTypeDef heth;
 
+I2C_HandleTypeDef hi2c1;
+
 TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart3;
@@ -78,16 +85,19 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 char sensor[50];
 char polje[] = "Hello \n\r";
 //= "Hello\n\r";
-
+int readTemperature();
 void (*ptr[5])(void*) = {&Blink_Led, &Message, &Sensor};
 
 
 
-unsigned long start_millis = 0;
-
 task1 t1;
 task2 t2;
 task3 t3;
+uint8_t temp[5];
+uint8_t t = 0;
+uint8_t h = 0;
+int temperatura;
+int vlaga;
 
 void sch();
 void values();
@@ -103,6 +113,7 @@ static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -151,6 +162,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_TIM2_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
   htim2.Init.Period = T2_PRE;
@@ -285,6 +297,54 @@ static void MX_ETH_Init(void)
   /* USER CODE BEGIN ETH_Init 2 */
 
   /* USER CODE END ETH_Init 2 */
+
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.Timing = 0x10707DBC;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
 
 }
 
@@ -476,12 +536,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : DHT11_Pin */
-  GPIO_InitStruct.Pin = DHT11_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(DHT11_GPIO_Port, &GPIO_InitStruct);
-
   /*Configure GPIO pin : USB_OTG_FS_PWR_EN_Pin */
   GPIO_InitStruct.Pin = USB_OTG_FS_PWR_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -540,22 +594,41 @@ void Message(void *arg2)
 
 
 
-
-
 }
 
 void Sensor(void *arg3)
 {
 	if(arg3 == NULL) return;
 
+	int temperature = readTemperature();
+	if(temperature != -999.0)
+	{
+		char buffer[50];
+		int len = sniprintf(buffer, sizeof(buffer), "Temperatura je %d", temperature);
+		HAL_UART_Transmit(&huart3,(uint8_t *)buffer, len, 1000);
+	}
 
-		int a = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1);
-		int len =  sniprintf(sensor,sizeof(sensor), "Temp: %d", a);
-		HAL_UART_Transmit(&huart3,(uint8_t *)sensor, len, 1000);
+
+
+
+	//	int len =  sniprintf(temp,sizeof(temp), "Temp: %d", vlaga, temperatura);
+		//HAL_UART_Transmit(&huart3,(uint8_t *)temp, len, 1000);
 
 
 
 
+}
+
+int readTemperature()
+{
+	uint8_t tempdata[2]; //array u koji stavljam o�?itane podatke sa senzora
+
+
+	HAL_I2C_Master_Transmit(&hi2c1, SHT21_ADDRESS << 1, (uint8_t *)SHT21_CMD_TEMP, 1, 1000); //0xE3 je komanda za ocitanje sa senzora, 1 je broj bajtova koji saljemo
+	HAL_I2C_Master_Receive(&hi2c1, SHT21_ADDRESS << 1, tempdata, 2, 1000);
+	uint16_t rawtemp = (tempdata[0] << 8) | tempdata[1];
+	rawtemp &= ~0x0003;
+	return -46.85 + 175.72 *(rawtemp / 65536.0);
 }
 
 void sch()
